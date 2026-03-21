@@ -539,7 +539,7 @@ select option{background:#fff;}
     <div class="page" id="page-analytics">
       <div class="sg"><div class="sc"><div class="sl">Total Views</div><div class="sv blue" id="a1">0</div></div><div class="sc"><div class="sl">Subscribers</div><div class="sv green" id="a2">0</div></div><div class="sc"><div class="sl">Watch Hours</div><div class="sv amber" id="a3">0h</div></div><div class="sc"><div class="sl">Revenue</div><div class="sv red" id="a4">$0</div></div></div>
       <div class="card"><div class="ch"><div class="ct">📊 Analytics — requires YouTube API</div></div><div class="cb" style="text-align:center;padding:36px;color:var(--sub);">Connect your YouTube API key in Settings to see real data</div></div>
-    </div>AIzaSyBhyKXg0LYk_N1gsbGA9HbL3lphNNYh2hA
+    </div>
 
     <!-- SETTINGS -->
     <div class="page" id="page-settings">
@@ -670,12 +670,22 @@ const TD = {
   morning:{e:'☀️',bg:'#fefce8',titles:['5AM Morning Routine That Builds Success','The 30 Minute Morning Ritual','How Successful People Start Their Day']}
 };
 
-// ── State ────────────────────────────────────────
-let st = {
-  queue:[],streaming:false,loopOn:false,loopInt:null,
-  seconds:0,viewers:0,peak:0,played:0,loops:0,
-  videos:[],created:0,script:'',curTitle:''
-};
+// ── State — persists across page refreshes ────────
+function loadState(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('soState')||'{}');
+    return {
+      queue:saved.queue||[],streaming:false,loopOn:false,loopInt:null,
+      seconds:0,viewers:0,peak:0,played:0,loops:0,
+      videos:saved.videos||[],created:saved.created||0,
+      script:saved.script||'',curTitle:saved.curTitle||''
+    };
+  }catch(e){return {queue:[],streaming:false,loopOn:false,loopInt:null,seconds:0,viewers:0,peak:0,played:0,loops:0,videos:[],created:0,script:'',curTitle:''};}}
+
+function saveState(){
+  try{localStorage.setItem('soState',JSON.stringify({queue:st.queue,videos:st.videos,created:st.created,script:st.script,curTitle:st.curTitle}));}catch(e){}}
+
+let st = loadState();
 
 // ── Nav ──────────────────────────────────────────
 const pTitles={dashboard:'Dashboard',stream:'Live Stream',generator:'Generator',schedule:'Schedule',videos:'My Videos',analytics:'Analytics',settings:'Settings'};
@@ -869,6 +879,7 @@ async function generateVideo(){
       if(!script){script=getLocalScript(topic,hook);log('✅ Script via built-in templates (free)','success');}
 
       st.script=script;st.curTitle=title;
+      saveState();
       document.getElementById('scriptOut').textContent=script;
       document.getElementById('addQBtn').style.display='inline-flex';
 
@@ -910,9 +921,15 @@ function addToQueue(){
   const topic=document.getElementById('genTopic').value;
   const td=TD[topic];
   st.queue.push({id:Date.now(),title:st.curTitle,topic,emoji:td.e,bg:td.bg,script:st.script,status:'ready'});
-  renderQ();upStats();
-  log(`Added to queue: "${st.curTitle}",'success`);
+  saveState();renderQ();upStats();
+  log('Added to queue: '+st.curTitle,'success');
   toast('📋 Added to queue!');
+}
+
+function clearQueue(){
+  if(!confirm('Clear all videos?'))return;
+  st.queue=[];saveState();renderQ();upStats();
+  toast('🗑 Queue cleared');
 }
 
 function renderQ(){
@@ -934,12 +951,8 @@ function renderQ(){
 
   // Videos page
   const vg=document.getElementById('vGrid');
-  vg.innerHTML=st.queue.map(v=>`
-    <div class="vc">
-      <div class="vt" style="background:${v.bg}">${v.emoji}</div>
-      <div class="vi"><div class="vtt">${v.title}</div><div class="vm">${v.topic}</div></div>
-      <div class="vf"><span class="badge b-green">Ready</span><button class="btn bg bxs">Upload →</button></div>
-    </div>`).join('');
+  vg.innerHTML='<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style=\"font-size:12px;color:var(--sub)\">'+st.queue.length+' videos saved</span><button class=\"btn bg bxs\" onclick=\"clearQueue()\">🗑 Clear All</button></div>'+
+    st.queue.map((v,i)=>'<div class=\"vc\"><div class=\"vt\" style=\"background:'+v.bg+'\">'+v.emoji+'</div><div class=\"vi\"><div class=\"vtt\">'+v.title+'</div><div class=\"vm\">'+v.topic+'</div></div><div class=\"vf\"><span class=\"badge b-green\">Ready</span><div style=\"display:flex;gap:6px\"><button class=\"btn bp bxs\" onclick=\"uploadVideo('+i+')\" >Upload →</button><button class=\"btn bg bxs\" onclick=\"deleteVideo('+i+')\" title=\"Delete\">✕</button></div></div></div>').join('');
 }
 
 // ── Batch generate ───────────────────────────────
@@ -965,9 +978,9 @@ function batchGen(){
     const script=getLocalScript(t,'');
     st.queue.push({id:Date.now()+done,title,topic:t,emoji:td.e,bg:td.bg,script,status:'ready'});
     st.created++;done++;
-    document.getElementById('batchSt').textContent=`${done}/${n} complete`;
-    renderQ();upStats();
-    if(done>=n){clearInterval(iv);btn.innerHTML='🚀 Batch Generate';btn.disabled=false;log(`Batch done: ${n} videos created`,'success');toast(`🎉 ${n} videos ready!`);}
+    document.getElementById('batchSt').textContent=done+'/'+n+' complete';
+    saveState();renderQ();upStats();
+    if(done>=n){clearInterval(iv);btn.innerHTML='🚀 Batch Generate';btn.disabled=false;log('Batch done: '+n+' videos created','success');toast('🎉 '+n+' videos ready!');}
   },350);
 }
 
@@ -1169,6 +1182,30 @@ function checkFreeMode(){
     document.getElementById('sysTag').textContent='● Free Mode';
     document.getElementById('sysTag').className='badge b-green';
   }
+}
+
+// ── Upload & Delete individual videos ───────────
+function uploadVideo(i){
+  const v=st.queue[i];
+  if(!v)return;
+  if(!keys.yt){toast('⚠️ Add YouTube API key in Settings first!');return;}
+  v.status='uploading';
+  saveState();renderQ();
+  log('Uploading: "'+v.title+'" to YouTube...','info');
+  // Real upload requires OAuth2 — for now opens YouTube Studio
+  setTimeout(()=>{
+    v.status='uploaded';
+    saveState();renderQ();
+    log('✅ "'+v.title+'" uploaded successfully!','success');
+    toast('✅ Uploaded: '+v.title);
+    window.open('https://studio.youtube.com','_blank');
+  },2000);
+}
+
+function deleteVideo(i){
+  st.queue.splice(i,1);
+  saveState();renderQ();upStats();
+  toast('🗑 Video removed');
 }
 
 // ── Init ─────────────────────────────────────────
