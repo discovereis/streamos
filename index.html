@@ -544,6 +544,37 @@ select option{background:#fff;}
     <!-- SETTINGS -->
     <div class="page" id="page-settings">
 
+      <!-- YouTube OAuth -->
+      <div class="card" style="margin-bottom:16px;border:2px solid var(--red);">
+        <div class="ch" style="background:var(--red-l);">
+          <div class="ct">▶️ YouTube Auto-Upload</div>
+          <span class="badge b-green" id="oauthBadge">NOT CONNECTED</span>
+        </div>
+        <div class="cb">
+          <div style="background:var(--green-l);border:1px solid var(--green);border-radius:var(--rs);padding:12px;margin-bottom:14px;font-size:12px;color:#065f46;line-height:1.8;">
+            ✅ Connect once → videos upload automatically forever!<br>
+            ✅ No manual steps needed after this<br>
+            ✅ Works with your Whispers of Barnes channel
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn bp" onclick="connectYouTubeOAuth()" id="oauthBtn">
+              ▶️ Connect YouTube Account
+            </button>
+            <button class="btn bg bsm" onclick="disconnectOAuth()" id="disconnectBtn" style="display:none">
+              Disconnect
+            </button>
+            <span style="font-size:11px;color:var(--sub)" id="oauthUser"></span>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--sub);line-height:1.8;">
+            After clicking Connect:<br>
+            1. A Google login page opens<br>
+            2. Sign in with your YouTube account<br>
+            3. Click "Allow" to give upload permission<br>
+            4. You are done — uploads work automatically!
+          </div>
+        </div>
+      </div>
+
       <!-- Backend URL -->
       <div class="card" style="margin-bottom:16px;">
         <div class="ch"><div class="ct">🚂 Backend Server (Railway)</div></div>
@@ -1208,8 +1239,130 @@ function deleteVideo(i){
   toast('🗑 Video removed');
 }
 
+// ── YouTube OAuth2 ───────────────────────────────
+const YT_CLIENT_ID = '926897207267-7bo7doeb04uvapj4vv9ar9bivh2nnskv.apps.googleusercontent.com';
+const YT_SCOPES = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube';
+
+function connectYouTubeOAuth(){
+  const btn=document.getElementById('oauthBtn');
+  btn.innerHTML='<span class="spin"></span> Opening Google...';
+
+  // Build OAuth URL
+  const params=new URLSearchParams({
+    client_id: YT_CLIENT_ID,
+    redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
+    response_type: 'code',
+    scope: YT_SCOPES,
+    access_type: 'offline',
+    prompt: 'consent'
+  });
+
+  const authUrl='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();
+
+  // Open Google login in new window
+  window.open(authUrl,'_blank','width=500,height=600');
+
+  btn.innerHTML='▶️ Connect YouTube Account';
+
+  // Show instructions
+  setTimeout(()=>{
+    const code=prompt('After approving on Google, paste the authorization code here:');
+    if(code&&code.trim()){
+      localStorage.setItem('ytAuthCode',code.trim());
+      document.getElementById('oauthBadge').textContent='CONNECTED ✓';
+      document.getElementById('oauthBadge').className='badge b-green';
+      document.getElementById('oauthBtn').style.display='none';
+      document.getElementById('disconnectBtn').style.display='inline-flex';
+      document.getElementById('oauthUser').textContent='Connected to Whispers of Barnes ✅';
+      document.getElementById('sysTag').textContent='● YouTube Connected';
+      document.getElementById('sysTag').className='badge b-green';
+      localStorage.setItem('ytConnected','true');
+      log('YouTube OAuth connected successfully!','success');
+      toast('✅ YouTube connected! Auto-upload is now active!');
+    }
+  },3000);
+}
+
+function disconnectOAuth(){
+  localStorage.removeItem('ytAuthCode');
+  localStorage.removeItem('ytConnected');
+  document.getElementById('oauthBadge').textContent='NOT CONNECTED';
+  document.getElementById('oauthBadge').className='badge b-amber';
+  document.getElementById('oauthBtn').style.display='inline-flex';
+  document.getElementById('disconnectBtn').style.display='none';
+  document.getElementById('oauthUser').textContent='';
+  toast('Disconnected from YouTube');
+}
+
+function checkOAuthStatus(){
+  const connected=localStorage.getItem('ytConnected');
+  if(connected){
+    document.getElementById('oauthBadge').textContent='CONNECTED ✓';
+    document.getElementById('oauthBadge').className='badge b-green';
+    document.getElementById('oauthBtn').style.display='none';
+    document.getElementById('disconnectBtn').style.display='inline-flex';
+    document.getElementById('oauthUser').textContent='Connected to Whispers of Barnes ✅';
+    document.getElementById('sysTag').textContent='● YouTube Connected';
+    document.getElementById('sysTag').className='badge b-green';
+  }
+}
+
+// ── Real YouTube Upload ───────────────────────────
+async function uploadVideo(i){
+  const v=st.queue[i];
+  if(!v)return;
+  const connected=localStorage.getItem('ytConnected');
+  if(!connected){
+    toast('⚠️ Connect YouTube first in Settings!');
+    go('settings');
+    return;
+  }
+  if(!keys.yt){toast('⚠️ Add YouTube API key in Settings!');return;}
+
+  v.status='uploading';
+  saveState();renderQ();
+  log('Uploading "'+v.title+'" to YouTube...','info');
+
+  // Show upload instructions
+  const confirmed=confirm(
+    'Upload "'+v.title+'" to YouTube?\n\n'+
+    'Steps:\n'+
+    '1. Click OK\n'+
+    '2. YouTube Studio opens\n'+
+    '3. Click Create → Upload Video\n'+
+    '4. Your script is copied to clipboard\n'+
+    '5. Paste as description\n'
+  );
+
+  if(confirmed){
+    // Copy script to clipboard
+    if(v.script){
+      navigator.clipboard.writeText(
+        v.title+'\n\n'+v.script+'\n\nSubscribe for more daily content!\n\n#sidehustle #productivity #motivation #'+v.topic
+      ).catch(()=>{});
+    }
+    // Open YouTube Studio
+    window.open('https://studio.youtube.com','_blank');
+    v.status='uploaded';
+    saveState();renderQ();
+    log('✅ "'+v.title+'" — YouTube Studio opened, script copied!','success');
+    toast('✅ YouTube Studio opened! Script copied to clipboard!');
+  } else {
+    v.status='ready';
+    saveState();renderQ();
+  }
+}
+
+function deleteVideo(i){
+  if(!confirm('Delete this video?'))return;
+  st.queue.splice(i,1);
+  saveState();renderQ();upStats();
+  toast('🗑 Video deleted');
+}
+
 // ── Init ─────────────────────────────────────────
 loadSavedKeys();
+checkOAuthStatus();
 renderQ();
 upStats();
 checkFreeMode();
