@@ -1245,7 +1245,6 @@ const YT_SCOPES = 'https://www.googleapis.com/auth/youtube.upload https://www.go
 
 function connectYouTubeOAuth(){
   const btn=document.getElementById('oauthBtn');
-  btn.innerHTML='<span class="spin"></span> Opening Google...';
 
   // Build OAuth URL
   const params=new URLSearchParams({
@@ -1259,28 +1258,67 @@ function connectYouTubeOAuth(){
 
   const authUrl='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();
 
-  // Open Google login in new window
-  window.open(authUrl,'_blank','width=500,height=600');
+  // Show paste box FIRST before opening Google
+  showOAuthPasteBox(authUrl);
+}
 
-  btn.innerHTML='▶️ Connect YouTube Account';
+function showOAuthPasteBox(authUrl){
+  // Remove existing box if any
+  const existing=document.getElementById('oauthPasteBox');
+  if(existing)existing.remove();
 
-  // Show instructions
-  setTimeout(()=>{
-    const code=prompt('After approving on Google, paste the authorization code here:');
-    if(code&&code.trim()){
-      localStorage.setItem('ytAuthCode',code.trim());
-      document.getElementById('oauthBadge').textContent='CONNECTED ✓';
-      document.getElementById('oauthBadge').className='badge b-green';
-      document.getElementById('oauthBtn').style.display='none';
-      document.getElementById('disconnectBtn').style.display='inline-flex';
-      document.getElementById('oauthUser').textContent='Connected to Whispers of Barnes ✅';
-      document.getElementById('sysTag').textContent='● YouTube Connected';
-      document.getElementById('sysTag').className='badge b-green';
-      localStorage.setItem('ytConnected','true');
-      log('YouTube OAuth connected successfully!','success');
-      toast('✅ YouTube connected! Auto-upload is now active!');
-    }
-  },3000);
+  // Create paste box UI
+  const box=document.createElement('div');
+  box.id='oauthPasteBox';
+  box.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  box.innerHTML=`
+    <div style="background:white;border-radius:16px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;">🔗 Connect YouTube</div>
+      <div style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6;">
+        <strong>Step 1:</strong> Click the button below to open Google<br>
+        <strong>Step 2:</strong> Sign in → Click Allow<br>
+        <strong>Step 3:</strong> Copy the code shown<br>
+        <strong>Step 4:</strong> Paste it in the box below → Click Connect
+      </div>
+      <a href="${authUrl}" target="_blank" style="display:block;background:#2563eb;color:white;text-align:center;padding:12px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:16px;">
+        🔐 Open Google Authorization →
+      </a>
+      <div style="font-size:12px;color:#666;margin-bottom:8px;font-weight:600;">Paste your authorization code here:</div>
+      <input id="oauthCodeInput" type="text" placeholder="4/0AX4XfWi-xxxxxxxxxxxxxxxxxx"
+        style="width:100%;border:2px solid #e2e5f0;border-radius:8px;padding:10px 12px;font-size:13px;font-family:monospace;margin-bottom:12px;outline:none;"
+        onfocus="this.style.borderColor='#2563eb'">
+      <div style="display:flex;gap:8px;">
+        <button onclick="submitOAuthCode()" style="flex:1;background:#10b981;color:white;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;">
+          ✅ Connect YouTube
+        </button>
+        <button onclick="document.getElementById('oauthPasteBox').remove()" style="background:#f0f1f6;border:none;border-radius:8px;padding:11px 16px;font-size:14px;cursor:pointer;">
+          Cancel
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(box);
+  setTimeout(()=>document.getElementById('oauthCodeInput').focus(),100);
+}
+
+function submitOAuthCode(){
+  const code=document.getElementById('oauthCodeInput').value.trim();
+  if(!code){
+    document.getElementById('oauthCodeInput').style.borderColor='#ef4444';
+    document.getElementById('oauthCodeInput').placeholder='Please paste your code here!';
+    return;
+  }
+  localStorage.setItem('ytAuthCode',code);
+  localStorage.setItem('ytConnected','true');
+  document.getElementById('oauthPasteBox').remove();
+  document.getElementById('oauthBadge').textContent='CONNECTED ✓';
+  document.getElementById('oauthBadge').className='badge b-green';
+  document.getElementById('oauthBtn').style.display='none';
+  document.getElementById('disconnectBtn').style.display='inline-flex';
+  document.getElementById('oauthUser').textContent='✅ Connected to Whispers of Barnes';
+  document.getElementById('sysTag').textContent='● YouTube Connected';
+  document.getElementById('sysTag').className='badge b-green';
+  log('YouTube OAuth connected! Auto-upload is now active!','success');
+  toast('🎉 YouTube connected! Videos will upload automatically!');
 }
 
 function disconnectOAuth(){
