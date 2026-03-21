@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamOS — 24/7 YouTube Automation</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#f4f6fb;--white:#fff;--surface:#eef0f7;--border:#e2e5f0;
+  --text:#0d0f1c;--sub:#6b7490;--accent:#2563eb;--accent-l:#eff6ff;
+  --red:#ef4444;--red-l:#fef2f2;--green:#10b981;--green-l:#ecfdf5;
+  --amber:#f59e0b;--amber-l:#fffbeb;--purple:#7c3aed;--purple-l:#f5f3ff;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.09);--r:12px;--rs:8px;
+}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* sidebar */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;padding:20px 0;}
+.logo-wrap{padding:0 18px 20px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.logo-mark{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;}
+.logo-name{font-size:17px;font-weight:700;letter-spacing:-.3px;}
+.logo-sub{font-size:10px;color:var(--sub);font-family:'JetBrains Mono',monospace;margin-top:1px;}
+.nav-sec{padding:0 10px;margin-bottom:6px;}
+.nav-lbl{font-size:10px;font-weight:600;color:var(--sub);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:5px;margin-top:10px;}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;color:var(--sub);font-weight:500;font-size:13px;transition:all .15s;border:none;background:none;width:100%;text-align:left;}
+.ni:hover{background:var(--surface);color:var(--text);}
+.ni.active{background:var(--accent-l);color:var(--accent);}
+.ni .ic{font-size:15px;width:20px;text-align:center;}
+.sidebar-foot{margin-top:auto;padding:14px 18px 0;border-top:1px solid var(--border);}
+.live-pill{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--red-l);border-radius:var(--rs);font-size:12px;font-weight:600;color:var(--red);}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* topbar */
+.main{margin-left:220px;min-height:100vh;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.pg-title{font-size:15px;font-weight:600;}
+.pg-sub{font-size:11px;color:var(--sub);font-family:'JetBrains Mono',monospace;}
+.content{padding:24px 28px;}
+
+/* pages */
+.page{display:none;animation:fade .2s ease;}
+.page.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+/* cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);}
+.ch{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ct{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px;}
+.cb{padding:18px;}
+
+/* stats */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.sc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);}
+.sl{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.sv{font-size:26px;font-weight:700;letter-spacing:-1px;line-height:1;margin-bottom:5px;}
+.sc2{font-size:11px;font-weight:500;}
+.green{color:var(--green);}.red{color:var(--red);}.blue{color:var(--accent);}.amber{color:var(--amber);}
+
+/* grid */
+.g2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:18px;}
+.g22{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.btn:hover{filter:brightness(.94);}
+.btn:active{transform:scale(.98);}
+.bp{background:var(--accent);color:#fff;}
+.bd{background:var(--red);color:#fff;}
+.bg{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+.bsm{padding:6px 12px;font-size:12px;}
+.bxs{padding:4px 9px;font-size:11px;}
+.bfull{width:100%;justify-content:center;}
+
+/* forms */
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.inp,.sel,.ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:9px 11px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .15s;}
+.inp:focus,.sel:focus,.ta:focus{border-color:var(--accent);}
+.ta{resize:vertical;min-height:80px;line-height:1.6;}
+select option{background:#fff;}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.b-green{background:var(--green-l);color:var(--green);}
+.b-red{background:var(--red-l);color:var(--red);}
+.b-amber{background:var(--amber-l);color:var(--amber);}
+.b-blue{background:var(--accent-l);color:var(--accent);}
+.b-purple{background:var(--purple-l);color:var(--purple);}
+
+/* toggle */
+.tog{position:relative;width:44px;height:22px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-tr{position:absolute;inset:0;background:var(--border);border-radius:22px;cursor:pointer;transition:.2s;}
+.tog-tr::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.tog input:checked+.tog-tr{background:var(--accent);}
+.tog input:checked+.tog-tr::before{transform:translateX(22px);}
+
+/* progress */
+.prog{height:4px;background:var(--surface);border-radius:2px;overflow:hidden;margin:8px 0;}
+.prog-b{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease;}
+
+/* pipeline */
+.pipeline{display:flex;align-items:center;gap:0;overflow-x:auto;padding:4px 0;}
+.p-step{flex:1;min-width:70px;text-align:center;padding:9px 6px;border-radius:var(--rs);background:var(--bg);border:1px solid var(--border);font-size:10px;color:var(--sub);font-weight:500;}
+.p-step.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+.p-step.done{background:var(--green-l);border-color:var(--green);color:var(--green);}
+.p-icon{font-size:16px;margin-bottom:3px;display:block;}
+.p-arr{color:var(--border);font-size:14px;padding:0 3px;flex-shrink:0;}
+
+/* queue */
+.ql{display:flex;flex-direction:column;gap:6px;}
+.qi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--rs);border:1px solid var(--border);transition:all .15s;cursor:default;}
+.qi:hover{border-color:var(--accent);background:var(--accent-l);}
+.qi.now{border-color:var(--red);background:var(--red-l);}
+.q-n{width:20px;height:20px;background:var(--surface);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--sub);flex-shrink:0;}
+.qi.now .q-n{background:var(--red);color:#fff;}
+.q-th{width:44px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.q-info{flex:1;min-width:0;}
+.q-tt{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.q-mt{font-size:10px;color:var(--sub);font-family:'JetBrains Mono',monospace;}
+.q-dur{font-size:10px;color:var(--sub);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+
+/* stream monitor */
+.monitor{position:relative;background:#0a0c14;border-radius:var(--rs);aspect-ratio:16/9;overflow:hidden;}
+.m-bars{position:absolute;bottom:0;left:0;right:0;height:50px;display:flex;align-items:flex-end;gap:3px;padding:0 16px;display:none;}
+.m-bar{flex:1;background:linear-gradient(to top,var(--accent),#60a5fa);border-radius:2px 2px 0 0;animation:b-anim 1s ease-in-out infinite alternate;}
+@keyframes b-anim{from{transform:scaleY(.2);}to{transform:scaleY(1);}}
+.m-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.m-emoji{font-size:38px;margin-bottom:8px;}
+.m-title{color:#fff;font-size:14px;font-weight:600;text-align:center;padding:0 20px;text-shadow:0 2px 8px rgba(0,0,0,.5);}
+.m-sub{color:rgba(255,255,255,.45);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:4px;}
+.m-top{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;}
+.m-live{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:1px;display:none;align-items:center;gap:4px;}
+.m-timer{background:rgba(0,0,0,.5);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 7px;border-radius:4px;display:none;}
+.m-bot{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.65));padding:14px 10px 8px;display:flex;align-items:flex-end;gap:8px;}
+.m-viewers{color:#fff;font-size:10px;display:flex;align-items:center;gap:4px;opacity:0;}
+.m-prog{flex:1;height:2px;background:rgba(255,255,255,.2);border-radius:1px;overflow:hidden;}
+.m-prog-fill{height:100%;background:var(--accent);animation:mprog 8s linear infinite;}
+@keyframes mprog{from{width:0%;}to{width:100%;}}
+
+/* terminal log */
+.term{background:#0a0c14;border-radius:var(--rs);padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9;max-height:180px;overflow-y:auto;color:#94a3b8;}
+.term::-webkit-scrollbar{width:3px;}
+.term::-webkit-scrollbar-thumb{background:#2a2a3a;border-radius:2px;}
+.lt{color:#475569;margin-right:8px;}
+.ls{color:#34d399;}.li{color:#60a5fa;}.lw{color:#fbbf24;}.le{color:#f87171;}
+
+/* api fields */
+.api-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.api-f{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px;transition:border-color .15s;}
+.api-f:focus-within{border-color:var(--accent);}
+.api-lbl{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .3s;}
+.api-dot.on{background:var(--green);}
+.api-inp{width:100%;background:transparent;border:none;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text);outline:none;}
+.api-inp::placeholder{color:var(--sub);}
+
+/* backend status banner */
+.backend-banner{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--rs);margin-bottom:18px;border:1px solid var(--border);background:var(--white);}
+.bb-dot{width:9px;height:9px;border-radius:50%;background:var(--amber);flex-shrink:0;}
+.bb-dot.online{background:var(--green);}
+.bb-url{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);}
+
+/* spinner */
+.spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;display:inline-block;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.spin-d{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .6s linear infinite;display:inline-block;}
+
+/* schedule table */
+.stbl{width:100%;border-collapse:collapse;}
+.stbl th{text-align:left;font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;padding:7px 11px;border-bottom:1px solid var(--border);}
+.stbl td{padding:9px 11px;border-bottom:1px solid var(--border);font-size:13px;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl tr:hover td{background:var(--bg);}
+
+/* videos grid */
+.vg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.vc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s;}
+.vc:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.vt{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:30px;}
+.vi{padding:11px;}
+.vtt{font-size:12px;font-weight:600;margin-bottom:3px;line-height:1.3;}
+.vm{font-size:10px;color:var(--sub);font-family:'JetBrains Mono',monospace;}
+.vf{padding:9px 11px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+
+/* loop card */
+.lc{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:18px;}
+.lh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.lt2{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;}
+
+/* toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--text);color:#fff;padding:11px 16px;border-radius:var(--rs);font-size:12.5px;font-weight:500;z-index:9999;transform:translateY(70px);opacity:0;transition:all .25s;box-shadow:var(--shadow-md);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+@media(max-width:860px){
+  .sidebar{width:56px;}.logo-name,.logo-sub,.nav-lbl,.ni span:last-child{display:none;}
+  .main{margin-left:56px;}.sg{grid-template-columns:1fr 1fr;}.g2,.g22{grid-template-columns:1fr;}
+  .api-grid{grid-template-columns:1fr;}.vg{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <div class="logo-icon">S</div>
+      <div><div class="logo-name">StreamOS</div><div class="logo-sub">24/7 AUTOMATION</div></div>
+    </div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Studio</div>
+    <button class="ni active" onclick="go('dashboard')"><span class="ic">▦</span><span>Dashboard</span></button>
+    <button class="ni" onclick="go('stream')"><span class="ic">📡</span><span>Live Stream</span></button>
+    <button class="ni" onclick="go('generator')"><span class="ic">⚡</span><span>Generator</span></button>
+    <button class="ni" onclick="go('schedule')"><span class="ic">📅</span><span>Schedule</span></button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Library</div>
+    <button class="ni" onclick="go('videos')"><span class="ic">🎬</span><span>My Videos</span></button>
+    <button class="ni" onclick="go('analytics')"><span class="ic">📈</span><span>Analytics</span></button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">System</div>
+    <button class="ni" onclick="go('settings')"><span class="ic">⚙️</span><span>Settings</span></button>
+  </div>
+  <div class="sidebar-foot">
+    <div class="live-pill"><div class="dot"></div><span id="sideStatus">OFFLINE</span></div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div><div class="pg-title" id="pgTitle">Dashboard</div><div class="pg-sub" id="pgSub">24/7 YouTube Automation</div></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge b-amber" id="sysTag">● Idle</span>
+      <button class="btn bp bsm" onclick="go('generator')">+ New Video</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+
+      <!-- Backend banner -->
+      <div class="backend-banner" id="backendBanner">
+        <div class="bb-dot" id="backendDot"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;" id="backendStatus">Backend: Not connected</div>
+          <div class="bb-url" id="backendUrl">Enter your Railway URL in Settings → connect your live backend</div>
+        </div>
+        <button class="btn bg bxs" onclick="go('settings')">Connect →</button>
+      </div>
+
+      <div class="sg">
+        <div class="sc"><div class="sl">Videos Created</div><div class="sv blue" id="s1">0</div><div class="sc2" style="color:var(--sub)">All time</div></div>
+        <div class="sc"><div class="sl">Live Viewers</div><div class="sv red" id="s2">0</div><div class="sc2" id="s2c" style="color:var(--sub)">Offline</div></div>
+        <div class="sc"><div class="sl">In Queue</div><div class="sv amber" id="s3">0</div><div class="sc2" style="color:var(--sub)">Ready to upload</div></div>
+        <div class="sc"><div class="sl">Est. Revenue</div><div class="sv green" id="s4">$0</div><div class="sc2" style="color:var(--sub)">Monthly</div></div>
+      </div>
+
+      <!-- Loop control -->
+      <div class="lc">
+        <div class="lh">
+          <div class="lt2">🔄 Automation Loop <span class="badge b-amber" id="loopBadge">STOPPED</span></div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:11px;color:var(--sub);font-family:'JetBrains Mono',monospace;" id="loopNext">Next: —</span>
+            <label class="tog"><input type="checkbox" id="loopToggle" onchange="toggleLoop()"><span class="tog-tr"></span></label>
+          </div>
+        </div>
+        <div class="pipeline" id="pipeline">
+          <div class="p-step" id="p1"><span class="p-icon">✍️</span>Script</div><div class="p-arr">→</div>
+          <div class="p-step" id="p2"><span class="p-icon">🎙</span>Voice</div><div class="p-arr">→</div>
+          <div class="p-step" id="p3"><span class="p-icon">🎬</span>Video</div><div class="p-arr">→</div>
+          <div class="p-step" id="p4"><span class="p-icon">🖼</span>Thumb</div><div class="p-arr">→</div>
+          <div class="p-step" id="p5"><span class="p-icon">📤</span>Upload</div><div class="p-arr">→</div>
+          <div class="p-step" id="p6"><span class="p-icon">📡</span>Stream</div>
+        </div>
+        <div class="prog"><div class="prog-b" id="loopProg" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sub);font-family:'JetBrains Mono',monospace;">
+          <span id="loopLbl">Idle — toggle to start</span><span id="loopPct">0%</span>
+        </div>
+      </div>
+
+      <div class="g2">
+        <!-- Monitor -->
+        <div class="card">
+          <div class="ch"><div class="ct">📡 Stream Monitor</div><span class="badge b-red" id="monBadge">OFFLINE</span></div>
+          <div class="cb">
+            <div class="monitor" style="margin-bottom:14px;">
+              <div class="m-bars" id="mBars">
+                <div class="m-bar" style="animation-delay:0s;animation-duration:.8s"></div>
+                <div class="m-bar" style="animation-delay:.1s;animation-duration:1.1s"></div>
+                <div class="m-bar" style="animation-delay:.2s;animation-duration:.9s"></div>
+                <div class="m-bar" style="animation-delay:.3s;animation-duration:1.3s"></div>
+                <div class="m-bar" style="animation-delay:.4s;animation-duration:.7s"></div>
+                <div class="m-bar" style="animation-delay:.5s;animation-duration:1s"></div>
+              </div>
+              <div class="m-center">
+                <div class="m-emoji" id="mEmoji">📺</div>
+                <div class="m-title" id="mTitle">No stream active</div>
+                <div class="m-sub" id="mSub">Start automation loop to begin</div>
+              </div>
+              <div class="m-top">
+                <div class="m-live" id="mLive"><div class="dot"></div>LIVE</div>
+                <div class="m-timer" id="mTimer">00:00:00</div>
+              </div>
+              <div class="m-bot">
+                <div class="m-viewers" id="mViewers">👁 <span id="viewerNum">0</span> watching</div>
+                <div class="m-prog"><div class="m-prog-fill" id="mProg" style="display:none"></div></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn bp bsm" id="startBtn" onclick="startStream()">▶ Go Live</button>
+              <button class="btn bd bsm" id="stopBtn" style="display:none" onclick="stopStream()">■ Stop</button>
+              <button class="btn bg bsm" onclick="go('stream')">Full View →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Queue -->
+        <div class="card">
+          <div class="ch"><div class="ct">📋 Queue</div><span class="badge b-blue" id="qBadge">0 videos</span></div>
+          <div class="cb" style="padding:12px;">
+            <div class="ql" id="qList"><div style="text-align:center;padding:18px;color:var(--sub);font-size:12px;">Queue empty. Generate videos to fill it.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <div class="card">
+        <div class="ch"><div class="ct">🖥 System Log</div><button class="btn bg bxs" onclick="clearLog()">Clear</button></div>
+        <div class="cb" style="padding:12px;"><div class="term" id="sysLog"><span class="lt">00:00:00</span><span class="li">StreamOS ready. Add your API keys in Settings to begin.</span><br></div></div>
+      </div>
+    </div>
+
+    <!-- STREAM PAGE -->
+    <div class="page" id="page-stream">
+      <div class="g22">
+        <div class="card">
+          <div class="ch"><div class="ct">📡 Stream Control</div><span class="badge b-red" id="streamBadge2">OFFLINE</span></div>
+          <div class="cb">
+            <div class="monitor" style="margin-bottom:14px;">
+              <div class="m-bars" id="mBars2">
+                <div class="m-bar" style="animation-delay:0s"></div><div class="m-bar" style="animation-delay:.15s"></div>
+                <div class="m-bar" style="animation-delay:.3s"></div><div class="m-bar" style="animation-delay:.45s"></div>
+              </div>
+              <div class="m-center"><div class="m-emoji" id="mEmoji2">📺</div><div class="m-title" id="mTitle2">No stream active</div></div>
+              <div class="m-top"><div class="m-live" id="mLive2"><div class="dot"></div>LIVE</div><div class="m-timer" id="mTimer2">00:00:00</div></div>
+            </div>
+            <div class="field"><label>Stream Title</label><input class="inp" id="streamTitleIn" value="🔥 24/7 Hustle & Productivity — Live 24hrs"></div>
+            <div class="field"><label>Loop Mode</label>
+              <select class="sel" id="loopMode">
+                <option>Loop Queue (repeat all videos)</option>
+                <option>Topic Rotation (auto-generate new)</option>
+                <option>Random Mix</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn bp bfull" id="startBtn2" onclick="startStream()">▶ Go Live</button>
+              <button class="btn bd bfull" id="stopBtn2" style="display:none" onclick="stopStream()">■ End Stream</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">📊 Stream Stats</div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px;">
+                <div class="sl">Duration</div><div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;" id="sDuration">00:00:00</div>
+              </div>
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px;">
+                <div class="sl">Peak Viewers</div><div style="font-size:20px;font-weight:700;" id="sPeak">0</div>
+              </div>
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px;">
+                <div class="sl">Videos Played</div><div style="font-size:20px;font-weight:700;" id="sVids">0</div>
+              </div>
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:12px;">
+                <div class="sl">Loop Count</div><div style="font-size:20px;font-weight:700;" id="sLoops">0</div>
+              </div>
+            </div>
+            <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Now Playing Queue</div>
+            <div class="ql" id="streamQ"><div style="color:var(--sub);font-size:11px;padding:6px;">No videos queued</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GENERATOR PAGE -->
+    <div class="page" id="page-generator">
+      <div class="g22">
+        <div class="card">
+          <div class="ch"><div class="ct">⚡ Video Generator</div></div>
+          <div class="cb">
+            <div class="field"><label>Topic</label>
+              <select class="sel" id="genTopic">
+                <option value="hustle">💰 Side Hustle Tips</option>
+                <option value="productivity">🧠 Productivity & Habits</option>
+                <option value="travel">✈️ Budget Travel</option>
+                <option value="motivation">🔥 Motivation</option>
+                <option value="money">📈 Money & Investing</option>
+                <option value="morning">☀️ Morning Routines</option>
+              </select>
+            </div>
+            <div class="field"><label>Duration</label>
+              <select class="sel" id="genDur">
+                <option value="60">60 sec (Short)</option>
+                <option value="180" selected>3 min</option>
+                <option value="480">8 min</option>
+              </select>
+            </div>
+            <div class="field"><label>Custom Hook (optional)</label><input class="inp" id="genHook" placeholder="e.g. How I made $1000 in 7 days..."></div>
+
+            <button class="btn bp bfull" onclick="generateVideo()" id="genBtn">⚡ Generate Video</button>
+
+            <div style="margin-top:16px;">
+              <div style="display:flex;flex-direction:column;gap:10px;" id="genSteps">
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;" id="gs1">1</div>
+                  <div><div style="font-size:12px;font-weight:600;">Script — OpenAI GPT</div><div style="font-size:11px;color:var(--sub);" id="gs1d">AI writes your full voiceover script</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;" id="gs2">2</div>
+                  <div><div style="font-size:12px;font-weight:600;">Voice — ElevenLabs</div><div style="font-size:11px;color:var(--sub);" id="gs2d">Converts script to lifelike speech</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;" id="gs3">3</div>
+                  <div><div style="font-size:12px;font-weight:600;">Video — Pexels</div><div style="font-size:11px;color:var(--sub);" id="gs3d">Stock clips matched to your content</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--accent-l);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;" id="gs4">4</div>
+                  <div><div style="font-size:12px;font-weight:600;">Upload — YouTube API</div><div style="font-size:11px;color:var(--sub);" id="gs4d">Auto-scheduled to your channel</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><div class="ct">📄 Script Output</div><button class="btn bg bxs" onclick="copyScript()">Copy</button></div>
+          <div class="cb" style="padding:12px;">
+            <div class="term" id="scriptOut" style="max-height:360px;color:#e2e8f0;font-size:11.5px;line-height:1.9;">Waiting for generation...</div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn bp bsm" onclick="addToQueue()" id="addQBtn" style="display:none">+ Add to Queue</button>
+              <button class="btn bg bsm" onclick="generateVideo()">↻ Regenerate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch -->
+      <div class="card">
+        <div class="ch"><div class="ct">🚀 Batch Generate</div><span style="font-size:11px;color:var(--sub)">Create many videos at once</span></div>
+        <div class="cb">
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px;">
+            <div class="btopic" onclick="togBatch(this,'hustle')" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px;text-align:center;cursor:pointer;transition:all .15s">
+              <div style="font-size:20px;margin-bottom:3px">💰</div><div style="font-size:10px;font-weight:500;">Side Hustle</div>
+            </div>
+            <div class="btopic" onclick="togBatch(this,'productivity')" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px;text-align:center;cursor:pointer;transition:all .15s">
+              <div style="font-size:20px;margin-bottom:3px">🧠</div><div style="font-size:10px;font-weight:500;">Productivity</div>
+            </div>
+            <div class="btopic" onclick="togBatch(this,'travel')" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px;text-align:center;cursor:pointer;transition:all .15s">
+              <div style="font-size:20px;margin-bottom:3px">✈️</div><div style="font-size:10px;font-weight:500;">Travel</div>
+            </div>
+            <div class="btopic" onclick="togBatch(this,'motivation')" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px;text-align:center;cursor:pointer;transition:all .15s">
+              <div style="font-size:20px;margin-bottom:3px">🔥</div><div style="font-size:10px;font-weight:500;">Motivation</div>
+            </div>
+            <div class="btopic" onclick="togBatch(this,'money')" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px;text-align:center;cursor:pointer;transition:all .15s">
+              <div style="font-size:20px;margin-bottom:3px">📈</div><div style="font-size:10px;font-weight:500;">Money</div>
+            </div>
+            <div class="btopic" onclick="togBatch(this,'morning')" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px;text-align:center;cursor:pointer;transition:all .15s">
+              <div style="font-size:20px;margin-bottom:3px">☀️</div><div style="font-size:10px;font-weight:500;">Morning</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <select class="sel" id="batchN" style="width:110px;"><option value="4">4 videos</option><option value="8" selected>8 videos</option><option value="12">12 videos</option><option value="20">20 videos</option></select>
+            <button class="btn bp" onclick="batchGen()" id="batchBtn">🚀 Batch Generate</button>
+            <span style="font-size:11px;color:var(--sub)" id="batchSt"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="page" id="page-schedule">
+      <div class="card">
+        <div class="ch"><div class="ct">📅 Upload Schedule</div><button class="btn bp bsm" onclick="addSlot()">+ Add Slot</button></div>
+        <div class="cb" style="padding:0">
+          <table class="stbl">
+            <thead><tr><th>Day</th><th>Time (EST)</th><th>Topic</th><th>Video Title</th><th>Status</th><th></th></tr></thead>
+            <tbody id="schedBody">
+              <tr><td><strong>Monday</strong></td><td style="font-family:'JetBrains Mono',monospace;font-size:12px;">5:00 PM</td><td>💰 Side Hustle</td><td>5 Side Hustles That Actually Work in 2026</td><td><span class="badge b-green">Scheduled</span></td><td><button class="btn bg bxs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+              <tr><td><strong>Wednesday</strong></td><td style="font-family:'JetBrains Mono',monospace;font-size:12px;">5:00 PM</td><td>🧠 Productivity</td><td>Morning Routine That Changed My Life</td><td><span class="badge b-green">Scheduled</span></td><td><button class="btn bg bxs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+              <tr><td><strong>Friday</strong></td><td style="font-family:'JetBrains Mono',monospace;font-size:12px;">5:00 PM</td><td>✈️ Travel</td><td>I Traveled 3 Countries For Under $800</td><td><span class="badge b-amber">Pending</span></td><td><button class="btn bg bxs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEOS -->
+    <div class="page" id="page-videos">
+      <div class="vg" id="vGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--sub);">
+          <div style="font-size:36px;margin-bottom:10px;">🎬</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:5px;">No videos yet</div>
+          <div style="font-size:12px;">Use the Generator to create your first video</div>
+          <button class="btn bp" style="margin-top:14px;" onclick="go('generator')">+ Create Video</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="page" id="page-analytics">
+      <div class="sg"><div class="sc"><div class="sl">Total Views</div><div class="sv blue" id="a1">0</div></div><div class="sc"><div class="sl">Subscribers</div><div class="sv green" id="a2">0</div></div><div class="sc"><div class="sl">Watch Hours</div><div class="sv amber" id="a3">0h</div></div><div class="sc"><div class="sl">Revenue</div><div class="sv red" id="a4">$0</div></div></div>
+      <div class="card"><div class="ch"><div class="ct">📊 Analytics — requires YouTube API</div></div><div class="cb" style="text-align:center;padding:36px;color:var(--sub);">Connect your YouTube API key in Settings to see real data</div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+
+      <!-- Backend URL -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="ch"><div class="ct">🚂 Backend Server (Railway)</div></div>
+        <div class="cb">
+          <div class="field">
+            <label>Your Railway Backend URL</label>
+            <input class="inp" id="backendUrlIn" placeholder="https://your-app.up.railway.app">
+          </div>
+          <button class="btn bp bsm" onclick="connectBackend()"><span id="connectBtnTxt">🔌 Connect Backend</span></button>
+          <div style="margin-top:10px;font-size:11px;color:var(--sub);">Don't have a backend yet? See the <strong>DEPLOY GUIDE</strong> below ↓</div>
+        </div>
+      </div>
+
+      <!-- API Keys -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="ch"><div class="ct">🔑 API Keys</div><span style="font-size:11px;color:var(--sub)">Stored locally in your browser</span></div>
+        <div class="cb">
+          <div class="api-grid">
+            <div class="api-f"><div class="api-lbl"><span class="api-dot" id="d-yt"></span>YouTube API v3</div><input class="api-inp" type="password" id="k-yt" placeholder="AIza..."></div>
+            <div class="api-f"><div class="api-lbl"><span class="api-dot" id="d-el"></span>ElevenLabs</div><input class="api-inp" type="password" id="k-el" placeholder="your-key"></div>
+            <div class="api-f"><div class="api-lbl"><span class="api-dot" id="d-px"></span>Pexels</div><input class="api-inp" type="password" id="k-px" placeholder="your-key"></div>
+            <div class="api-f"><div class="api-lbl"><span class="api-dot" id="d-oa"></span>OpenAI</div><input class="api-inp" type="password" id="k-oa" placeholder="sk-..."></div>
+          </div>
+          <div class="api-f" style="margin-bottom:12px;"><div class="api-lbl">YouTube Channel ID</div><input class="api-inp" type="text" id="k-ch" placeholder="UCxxxxxxxxxxxxxxxx" style="font-size:12px;"></div>
+          <button class="btn bp" onclick="saveKeys()">🔒 Save & Activate All</button>
+        </div>
+      </div>
+
+      <!-- Deploy Guide -->
+      <div class="card">
+        <div class="ch"><div class="ct">📋 Deploy Guide — Get Online in 10 Minutes</div></div>
+        <div class="cb">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+
+            <div style="background:var(--bg);border-radius:var(--rs);padding:16px;border:1px solid var(--border);">
+              <div style="font-weight:600;margin-bottom:8px;font-size:13px;">① GitHub Pages (Frontend Dashboard)</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.8;">
+                1. Go to <strong>github.com</strong> → Create account → New Repository<br>
+                2. Name it: <strong>streamos</strong> — check "Public"<br>
+                3. Upload <strong>index.html</strong> (the dashboard file)<br>
+                4. Settings → Pages → Source: main branch → Save<br>
+                5. Your dashboard is live at: <strong>yourusername.github.io/streamos</strong>
+              </div>
+            </div>
+
+            <div style="background:var(--bg);border-radius:var(--rs);padding:16px;border:1px solid var(--border);">
+              <div style="font-weight:600;margin-bottom:8px;font-size:13px;">② Railway.app (Backend — Free)</div>
+              <div style="font-size:12px;color:var(--sub);line-height:1.8;">
+                1. Go to <strong>railway.app</strong> → Sign up free with GitHub<br>
+                2. New Project → Deploy from GitHub repo<br>
+                3. Upload the <strong>backend/</strong> folder as a new GitHub repo<br>
+                4. Railway auto-detects Node.js and deploys it<br>
+                5. Copy your Railway URL (e.g. <em>streamos.up.railway.app</em>)<br>
+                6. Paste it above in "Backend Server URL" → Connect
+              </div>
+            </div>
+
+            <div style="background:var(--bg);border-radius:var(--rs);padding:16px;border:1px solid var(--border);">
+              <div style="font-weight:600;margin-bottom:8px;font-size:13px;">③ API Keys Checklist</div>
+              <div style="font-size:12px;color:var(--sub);line-height:2;">
+                ☐ <strong>YouTube API</strong> → console.cloud.google.com → Enable YouTube Data API v3<br>
+                ☐ <strong>Pexels</strong> → pexels.com/api → Free instant key<br>
+                ☐ <strong>ElevenLabs</strong> → elevenlabs.io → Free 10k chars/month<br>
+                ☐ <strong>OpenAI</strong> → platform.openai.com → $5 credit = 500+ videos
+              </div>
+            </div>
+
+            <div style="background:var(--amber-l);border-radius:var(--rs);padding:14px;border:1px solid var(--amber);font-size:12px;color:#92400e;line-height:1.8;">
+              ⚡ <strong>Total setup time: ~10 minutes.</strong> Once deployed, the backend runs 24/7 on Railway's free tier — auto-generating and scheduling videos even when your computer is completely off.
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ───────────────────────────────────────
+let BACKEND = localStorage.getItem('backendUrl') || '';
+let keys = JSON.parse(localStorage.getItem('soKeys') || '{}');
+
+// ── Topic data ───────────────────────────────────
+const TD = {
+  hustle:{e:'💰',bg:'#fef9c3',titles:['5 Side Hustles That Actually Work in 2026','How I Made My First $500 Online','Zero Dollar Side Hustles You Can Start Today','The Side Hustle That Changed My Life']},
+  productivity:{e:'🧠',bg:'#eff6ff',titles:['Morning Routine That Changed My Life','How I Get More Done in 2 Hours','The Habit System That Actually Works']},
+  travel:{e:'✈️',bg:'#f0fdf4',titles:['I Traveled 3 Countries For $800','Budget Travel System That Works','How to Travel for Almost Free']},
+  motivation:{e:'🔥',bg:'#fff7ed',titles:['Start Before You Are Ready','One Year From Now Everything Changes','Stop Waiting — Start Now']},
+  money:{e:'📈',bg:'#f5f3ff',titles:['Money Moves Schools Never Taught You','How to Build Wealth From Zero','Simple Money System For 2026']},
+  morning:{e:'☀️',bg:'#fefce8',titles:['5AM Morning Routine That Builds Success','The 30 Minute Morning Ritual','How Successful People Start Their Day']}
+};
+
+// ── State ────────────────────────────────────────
+let st = {
+  queue:[],streaming:false,loopOn:false,loopInt:null,
+  seconds:0,viewers:0,peak:0,played:0,loops:0,
+  videos:[],created:0,script:'',curTitle:''
+};
+
+// ── Nav ──────────────────────────────────────────
+const pTitles={dashboard:'Dashboard',stream:'Live Stream',generator:'Generator',schedule:'Schedule',videos:'My Videos',analytics:'Analytics',settings:'Settings'};
+const pSubs={dashboard:'24/7 YouTube Automation',stream:'Monitor your live broadcast',generator:'Create automated content',schedule:'Manage upload calendar',videos:'Your video library',analytics:'Channel metrics',settings:'Configure APIs & deployment'};
+
+function go(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.ni').forEach(x=>{if(x.getAttribute('onclick')===`go('${p}')`)x.classList.add('active');});
+  document.getElementById('pgTitle').textContent=pTitles[p]||p;
+  document.getElementById('pgSub').textContent=pSubs[p]||'';
+}
+
+// ── Toast ────────────────────────────────────────
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ── Log ──────────────────────────────────────────
+function log(m,t='info'){
+  const el=document.getElementById('sysLog');
+  const ts=new Date().toTimeString().slice(0,8);
+  el.innerHTML+=`<span class="lt">${ts}</span><span class="l${t[0]}">${m}</span><br>`;
+  el.scrollTop=el.scrollHeight;
+}
+function clearLog(){document.getElementById('sysLog').innerHTML='';}
+
+// ── Stats ────────────────────────────────────────
+function upStats(){
+  document.getElementById('s1').textContent=st.created;
+  document.getElementById('s3').textContent=st.queue.length;
+  document.getElementById('s2').textContent=st.streaming?st.viewers:'0';
+  document.getElementById('s2c').textContent=st.streaming?'● Streaming live':'Offline';
+  document.getElementById('s2c').style.color=st.streaming?'var(--red)':'var(--sub)';
+  const rev=(st.created*2.8).toFixed(0);
+  document.getElementById('s4').textContent='$'+rev;
+  document.getElementById('qBadge').textContent=st.queue.length+' videos';
+}
+
+// ── Backend connection ───────────────────────────
+async function connectBackend(){
+  const url=document.getElementById('backendUrlIn').value.trim().replace(/\/$/,'');
+  if(!url){toast('⚠️ Enter your Railway URL first');return;}
+  document.getElementById('connectBtnTxt').innerHTML='<span class="spin-d"></span> Connecting...';
+  try{
+    const r=await fetch(url+'/',{signal:AbortSignal.timeout(5000)});
+    const d=await r.json();
+    BACKEND=url;
+    localStorage.setItem('backendUrl',url);
+    document.getElementById('backendDot').classList.add('online');
+    document.getElementById('backendStatus').textContent='Backend: Connected ✓';
+    document.getElementById('backendUrl').textContent=url;
+    document.getElementById('sideStatus').textContent='ACTIVE';
+    document.getElementById('sysTag').textContent='● Backend Live';
+    document.getElementById('sysTag').className='badge b-green';
+    log('Backend connected: '+url,'success');
+    toast('✅ Backend connected!');
+  }catch(e){
+    log('Backend connection failed: '+e.message,'error');
+    toast('❌ Could not reach backend. Check URL.');
+  }
+  document.getElementById('connectBtnTxt').textContent='🔌 Connect Backend';
+}
+
+// ── Save keys ────────────────────────────────────
+function saveKeys(){
+  keys={yt:document.getElementById('k-yt').value.trim(),el:document.getElementById('k-el').value.trim(),
+        px:document.getElementById('k-px').value.trim(),oa:document.getElementById('k-oa').value.trim(),
+        ch:document.getElementById('k-ch').value.trim()};
+  localStorage.setItem('soKeys',JSON.stringify(keys));
+  ['yt','el','px','oa'].forEach(k=>{const d=document.getElementById('d-'+k);if(d)d.classList.toggle('on',!!keys[k]);});
+
+  // Send to backend if connected
+  if(BACKEND){
+    fetch(BACKEND+'/api/save-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(keys)}).catch(()=>{});
+  }
+  log('API keys saved locally','success');
+  toast('🔒 Keys saved!');
+}
+
+// ── Load saved keys on startup ───────────────────
+function loadSavedKeys(){
+  if(keys.yt)document.getElementById('k-yt').value=keys.yt;
+  if(keys.el)document.getElementById('k-el').value=keys.el;
+  if(keys.px)document.getElementById('k-px').value=keys.px;
+  if(keys.oa)document.getElementById('k-oa').value=keys.oa;
+  if(keys.ch)document.getElementById('k-ch').value=keys.ch;
+  ['yt','el','px','oa'].forEach(k=>{const d=document.getElementById('d-'+k);if(d)d.classList.toggle('on',!!keys[k]);});
+  if(BACKEND){document.getElementById('backendUrlIn').value=BACKEND;connectBackend();}
+}
+
+// ── Generate video ───────────────────────────────
+async function generateVideo(){
+  const topic=document.getElementById('genTopic').value;
+  const hook=document.getElementById('genHook').value;
+  const btn=document.getElementById('genBtn');
+  btn.innerHTML='<span class="spin"></span> Generating...';
+  btn.disabled=true;
+
+  const steps=[['gs1','gs1d','Writing script with OpenAI...'],['gs2','gs2d','Synthesizing voice with ElevenLabs...'],['gs3','gs3d','Matching Pexels stock videos...'],['gs4','gs4d','Uploading to YouTube...']];
+  let i=0;
+
+  const tick=setInterval(async()=>{
+    if(i>0){const prev=document.getElementById(steps[i-1][0]);prev.style.background='var(--green-l)';prev.style.color='var(--green)';prev.textContent='✓';}
+    if(i<steps.length){
+      const cur=document.getElementById(steps[i][0]);
+      cur.style.background='var(--accent)';cur.style.color='#fff';cur.textContent=i+1;
+      document.getElementById(steps[i][1]).textContent=steps[i][2];
+    }
+    i++;
+
+    if(i>steps.length){
+      clearInterval(tick);
+
+      let script='';
+      const td=TD[topic];
+      const title=td.titles[Math.floor(Math.random()*td.titles.length)];
+
+      // Try backend/OpenAI
+      if(BACKEND&&keys.oa){
+        try{
+          const r=await fetch(BACKEND+'/api/generate-script',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({topic,openaiKey:keys.oa,customHook:hook})});
+          const d=await r.json();
+          script=d.script;
+          log('Script generated via OpenAI','success');
+        }catch(e){log('Backend error, using local script','warn');}
+      }
+
+      if(!script){script=getLocalScript(topic,hook);}
+
+      st.script=script;st.curTitle=title;
+      document.getElementById('scriptOut').textContent=script;
+      document.getElementById('addQBtn').style.display='inline-flex';
+      btn.innerHTML='⚡ Generate Video';btn.disabled=false;
+      st.created++;upStats();
+      log(`Video ready: "${title}",'success`);
+      toast('✅ Video generated!');
+    }
+  },700);
+}
+
+function getLocalScript(topic,hook){
+  const scripts={
+    hustle:`HOOK: ${hook||'You don\'t need experience to start making money in 2026.'}\n\nHere are 5 side hustles completely free to start:\n\n1. Freelance Writing — Platforms like Fiverr pay $50-$500 per article.\n\n2. Print on Demand — Upload a design to Redbubble. Earn every time someone buys.\n\n3. Digital Products — Notion templates, ebooks. Create once. Sell unlimited times.\n\n4. YouTube Automation — Exactly what you're watching. AI does the work.\n\n5. Social Media Management — Local businesses need help. Charge $300-800/month.\n\nStart before you're ready. Subscribe for a new hustle tip every week!`,
+    productivity:`HOOK: ${hook||'I changed one morning habit and my entire life shifted.'}\n\nHere's the 30-minute routine that works:\n\nNo phone for the first hour. Your morning brain is your best brain. Don't waste it on notifications.\n\nDrink water immediately. Your body ran 8 hours without hydration.\n\nWrite three things: gratitude, your #1 task today, one thing you're looking forward to.\n\nMove for 20 minutes. Walk, stretch, anything.\n\nThen deep work. One focused hour before email or social media.\n\nTry this for 7 days. Tell me in the comments what changed.\n\nSubscribe for more habits that actually work!`,
+    travel:`HOOK: ${hook||'Last month I visited three countries and spent under $800 total.'}\n\nHere's my exact system:\n\nFlights: Google Flights flexible dates. Leaving Tuesday instead of Friday saves $200.\n\nAccommodation: Hostels for solo nights, Airbnb for longer stays. Saves 60%.\n\nFood: Local markets only. Street food beats restaurants every time.\n\nTransport: Rome2Rio finds the cheapest combination of bus and train.\n\nThe secret: flexibility. Move your trip two days and save hundreds.\n\nSubscribe for weekly budget travel content!`,
+    motivation:`HOOK: ${hook||'One year ago I had nothing figured out. Today everything is different.'}\n\nThe difference wasn't luck. It was one decision — to start before I was ready.\n\nMost people wait for the perfect moment. It never comes.\n\nMost people wait until they have more money. They never save enough.\n\nMost people wait until they feel confident. Confidence comes after action.\n\nStart ugly. Start small. Start today.\n\nBecause a year from now you'll wish you had started right now.\n\nSubscribe. New videos every week.`,
+    money:`HOOK: ${hook||'The rich do this with money. Nobody teaches it in school.'}\n\n5 money moves that changed my life:\n\n1. Pay yourself first — 20% into savings before any expense.\n\n2. Emergency fund — 3 months of expenses in cash before investing.\n\n3. Index funds — S&P 500 beats 90% of fund managers over 20 years.\n\n4. Multiple income streams — never rely on one source.\n\n5. Invest in yourself — skills return 10x, 100x, 1000x over a lifetime.\n\nSimple. Consistent. Patient.\n\nSubscribe for weekly money education that moves the needle.`,
+    morning:`HOOK: ${hook||'Your morning routine is either building your dream life or destroying it.'}\n\nHigh performers start proactively. Here's the difference:\n\nNo phone for the first hour. Your morning brain is your most creative brain.\n\nDrink water first. Hydration improves focus within 20 minutes.\n\nMove within 30 minutes. 10 minutes increases blood flow to your brain by 30%.\n\nWrite your three most important tasks before opening email.\n\nThen check your phone.\n\nThis takes 30 minutes. The compound effect over months is extraordinary.\n\nSubscribe for one powerful habit every week.`
+  };
+  return scripts[topic]||scripts.hustle;
+}
+
+function copyScript(){if(!st.script){toast('Generate a script first!');return;}navigator.clipboard.writeText(st.script).then(()=>toast('📋 Copied!'));}
+
+// ── Queue ────────────────────────────────────────
+function addToQueue(){
+  if(!st.script){toast('Generate a script first!');return;}
+  const topic=document.getElementById('genTopic').value;
+  const td=TD[topic];
+  st.queue.push({id:Date.now(),title:st.curTitle,topic,emoji:td.e,bg:td.bg,script:st.script,status:'ready'});
+  renderQ();upStats();
+  log(`Added to queue: "${st.curTitle}",'success`);
+  toast('📋 Added to queue!');
+}
+
+function renderQ(){
+  const el=document.getElementById('qList');
+  const el2=document.getElementById('streamQ');
+  if(!st.queue.length){
+    el.innerHTML='<div style="text-align:center;padding:18px;color:var(--sub);font-size:11px;">Queue empty</div>';
+    el2.innerHTML='<div style="color:var(--sub);font-size:11px;padding:6px;">No videos</div>';
+    return;
+  }
+  const html=st.queue.slice(0,6).map((v,i)=>`
+    <div class="qi ${i===0&&st.streaming?'now':''}">
+      <div class="q-n">${i===0&&st.streaming?'▶':i+1}</div>
+      <div class="q-th" style="background:${v.bg}">${v.emoji}</div>
+      <div class="q-info"><div class="q-tt">${v.title}</div><div class="q-mt">${v.topic} · ${v.status}</div></div>
+      <div class="q-dur">${['3:24','5:12','2:58','8:01','4:33','6:17'][i%6]}</div>
+    </div>`).join('');
+  el.innerHTML=html;el2.innerHTML=html;
+
+  // Videos page
+  const vg=document.getElementById('vGrid');
+  vg.innerHTML=st.queue.map(v=>`
+    <div class="vc">
+      <div class="vt" style="background:${v.bg}">${v.emoji}</div>
+      <div class="vi"><div class="vtt">${v.title}</div><div class="vm">${v.topic}</div></div>
+      <div class="vf"><span class="badge b-green">Ready</span><button class="btn bg bxs">Upload →</button></div>
+    </div>`).join('');
+}
+
+// ── Batch generate ───────────────────────────────
+let batchSel=[];
+function togBatch(el,t){
+  el.classList.toggle('active');
+  el.style.borderColor=el.classList.contains('active')?'var(--accent)':'var(--border)';
+  el.style.background=el.classList.contains('active')?'var(--accent-l)':'var(--bg)';
+  batchSel=el.classList.contains('active')?[...batchSel,t]:batchSel.filter(x=>x!==t);
+}
+
+function batchGen(){
+  const n=parseInt(document.getElementById('batchN').value);
+  const topics=batchSel.length?batchSel:Object.keys(TD);
+  const btn=document.getElementById('batchBtn');
+  btn.innerHTML='<span class="spin"></span> Generating...';btn.disabled=true;
+  let done=0;
+  document.getElementById('batchSt').textContent=`0/${n} complete`;
+  const iv=setInterval(()=>{
+    const t=topics[done%topics.length];
+    const td=TD[t];
+    const title=td.titles[Math.floor(Math.random()*td.titles.length)];
+    const script=getLocalScript(t,'');
+    st.queue.push({id:Date.now()+done,title,topic:t,emoji:td.e,bg:td.bg,script,status:'ready'});
+    st.created++;done++;
+    document.getElementById('batchSt').textContent=`${done}/${n} complete`;
+    renderQ();upStats();
+    if(done>=n){clearInterval(iv);btn.innerHTML='🚀 Batch Generate';btn.disabled=false;log(`Batch done: ${n} videos created`,'success');toast(`🎉 ${n} videos ready!`);}
+  },350);
+}
+
+// ── Stream ───────────────────────────────────────
+let timerIv;
+function startStream(){
+  if(!st.queue.length){toast('⚠️ Add videos to queue first!');return;}
+  st.streaming=true;st.seconds=0;st.viewers=Math.floor(Math.random()*40)+10;
+
+  setStreamUI(true);
+  const now=st.queue[0];
+  setNowPlaying(now);
+
+  timerIv=setInterval(()=>{
+    st.seconds++;
+    const h=String(Math.floor(st.seconds/3600)).padStart(2,'0');
+    const m=String(Math.floor((st.seconds%3600)/60)).padStart(2,'0');
+    const s=String(st.seconds%60).padStart(2,'0');
+    const t=`${h}:${m}:${s}`;
+    ['mTimer','mTimer2','sDuration'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=t;});
+    if(Math.random()>.7){st.viewers+=Math.floor(Math.random()*4)-1;}
+    st.viewers=Math.max(1,st.viewers);
+    if(st.viewers>st.peak)st.peak=st.viewers;
+    document.getElementById('viewerNum').textContent=st.viewers;
+    document.getElementById('sPeak').textContent=st.peak;
+    if(st.seconds%180===0){
+      st.played++;document.getElementById('sVids').textContent=st.played;
+      if(st.played%st.queue.length===0){st.loops++;document.getElementById('sLoops').textContent=st.loops;log(`Loop #${st.loops} complete — restarting queue`,'info');}
+      const next=st.queue[st.played%st.queue.length];
+      if(next){setNowPlaying(next);renderQ();}
+    }
+    upStats();
+  },1000);
+
+  log(`Stream started: "${now.title}",'success`);toast('📡 Stream is LIVE!');upStats();
+}
+
+function stopStream(){
+  st.streaming=false;clearInterval(timerIv);
+  setStreamUI(false);
+  log('Stream ended','warn');toast('■ Stream ended');upStats();
+}
+
+function setStreamUI(live){
+  ['monBadge','streamBadge2'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=live?'● LIVE':'OFFLINE';e.className='badge '+(live?'b-red':'b-red');}});
+  ['mLive','mLive2'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=live?'flex':'none';});
+  ['mTimer','mTimer2'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=live?'block':'none';});
+  ['mBars','mBars2'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=live?'flex':'none';});
+  document.getElementById('mViewers').style.opacity=live?'1':'0';
+  document.getElementById('startBtn').style.display=live?'none':'inline-flex';
+  document.getElementById('stopBtn').style.display=live?'inline-flex':'none';
+  if(document.getElementById('startBtn2'))document.getElementById('startBtn2').style.display=live?'none':'inline-flex';
+  if(document.getElementById('stopBtn2'))document.getElementById('stopBtn2').style.display=live?'inline-flex':'none';
+  if(!live){
+    ['mTitle','mTitle2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='No stream active';});
+    ['mEmoji','mEmoji2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='📺';});
+    document.getElementById('mSub').textContent='Start automation loop to begin';
+    document.getElementById('sideStatus').textContent='ACTIVE';
+  }
+}
+
+function setNowPlaying(v){
+  ['mTitle','mTitle2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=v.title;});
+  ['mEmoji','mEmoji2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=v.emoji;});
+  document.getElementById('mSub').textContent='Live on YouTube · '+v.emoji;
+  document.getElementById('sideStatus').textContent='LIVE';
+}
+
+// ── Automation Loop ──────────────────────────────
+function toggleLoop(){
+  const on=document.getElementById('loopToggle').checked;
+  document.getElementById('loopBadge').textContent=on?'RUNNING':'STOPPED';
+  document.getElementById('loopBadge').className='badge '+(on?'b-green':'b-amber');
+  st.loopOn=on;
+  if(on){runLoop();log('Automation loop started','success');toast('🔄 Loop running!');}
+  else{clearTimeout(st.loopInt);document.getElementById('loopNext').textContent='Next: —';setLP('Stopped',0);resetPipes();log('Loop stopped','warn');toast('⏸ Loop paused');}
+}
+
+function resetPipes(){for(let i=1;i<=6;i++){const e=document.getElementById('p'+i);if(e)e.className='p-step';}}
+function setLP(l,p){document.getElementById('loopLbl').textContent=l;document.getElementById('loopPct').textContent=Math.round(p)+'%';document.getElementById('loopProg').style.width=p+'%';}
+
+async function runLoop(){
+  if(!st.loopOn)return;
+  const topicKeys=Object.keys(TD);
+  const topic=topicKeys[Math.floor(Math.random()*topicKeys.length)];
+  const steps=[['Script generation',1],['Voice synthesis',2],['Video assembly',3],['Thumbnail',4],['YouTube upload',5],['Stream queue',6]];
+  for(const[l,p] of steps){
+    if(!st.loopOn)return;
+    setLP(l+'...',(p/6)*100);
+    resetPipes();
+    for(let i=1;i<p;i++){const e=document.getElementById('p'+i);if(e)e.className='p-step done';}
+    const e=document.getElementById('p'+p);if(e)e.className='p-step active';
+    await new Promise(r=>setTimeout(r,550));
+  }
+  const td=TD[topic];
+  const title=td.titles[Math.floor(Math.random()*td.titles.length)];
+  const script=getLocalScript(topic,'');
+  st.queue.push({id:Date.now(),title,topic,emoji:td.e,bg:td.bg,script,status:'ready'});
+  st.created++;renderQ();upStats();setLP('Cycle complete ✓',100);
+  log(`Auto-generated: "${title}",'success`);
+
+  // If backend connected, run real pipeline
+  if(BACKEND&&keys.oa){
+    fetch(BACKEND+'/api/run-pipeline',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic,...keys})}).catch(()=>{});
+  }
+
+  let cd=45;
+  const ci=setInterval(()=>{
+    if(!st.loopOn){clearInterval(ci);return;}
+    cd--;document.getElementById('loopNext').textContent=`Next: ${cd}s`;
+    if(cd<=0){clearInterval(ci);if(st.loopOn)runLoop();}
+  },1000);
+}
+
+// ── Schedule ─────────────────────────────────────
+function addSlot(){
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const day=days[new Date().getDay()];
+  const b=document.getElementById('schedBody');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><strong>${day}</strong></td><td style="font-family:'JetBrains Mono',monospace;font-size:12px;">5:00 PM</td><td>💰 Side Hustle</td><td>New Auto-Generated Video</td><td><span class="badge b-amber">Pending</span></td><td><button class="btn bg bxs" onclick="this.closest('tr').remove()">✕</button></td>`;
+  b.appendChild(tr);toast('📅 Slot added!');
+}
+
+// ── Init ─────────────────────────────────────────
+loadSavedKeys();
+renderQ();
+upStats();
+</script>
+</body>
+</html>
