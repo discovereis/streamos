@@ -1,0 +1,21 @@
+[phases.setup]
+nixPkgs = ["ffmpeg", "nodejs_20", "espeak"]
+
+[start]
+cmd = "node server.js"
+```
+
+Like this:
+```
+┌─────────────────────────────────────┐
+│ Name your file...  nixpacks.toml    │  ← type here
+├─────────────────────────────────────┤
+│                                     │
+│ [phases.setup]                      │  ← paste here
+│ nixPkgs = ["ffmpeg","nodejs_20",    │
+│            "espeak"]                │
+│                                     │
+│ [start]                             │
+│ cmd = "node server.js"              │
+│                                     │
+└─────────────────────────────────────┘
